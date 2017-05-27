@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 )
+
 // Parser uses a Scanner to provide a stream of Nodes via
 // the Parse() method.
 type Parser struct {
@@ -16,7 +17,7 @@ type Parser struct {
 
 // ParserConfig allows setting options for a Parser.
 type ParserConfig struct {
-	PreserveComments   bool // If true, the Parse() method will emit rather than skip Comments.
+	PreserveComments bool // If true, the Parse() method will emit rather than skip Comments.
 }
 
 // IllegalTokenError is returned if an IllegalToken is encountered.
@@ -117,14 +118,24 @@ func (p *Parser) scanIgnoreWhitespace() (n node) {
 
 func (p *Parser) scanFlag() (*Flag, error) {
 	n := p.scan()
+	start := n.pos
 	var f Flag
-	f.Name = n.lit
-	v := p.scanIgnoreWhitespace()
-	if v.tok != TokenValue {
-		return nil, v.unexpectedErr("flag value (starts with =)")
+	f.Name = n.lit[1:]
+	n = p.scanIgnoreWhitespace()
+	if n.tok != TokenEquals {
+		return nil, n.unexpectedErr("'='")
 	}
-	f.Value = v.lit
-	f.Node = node{pos: n.pos, end: v.end}
+	n = p.scanIgnoreWhitespace()
+	if n.tok != TokenString {
+		return nil, n.unexpectedErr("a quoted string")
+	}
+	s, err := strconv.Unquote(n.lit)
+	if err != nil {
+		return nil, n.syntaxErr(err)
+	}
+
+	f.Value = s
+	f.Node = node{pos: start, end: n.end}
 	return &f, nil
 }
 
@@ -136,7 +147,7 @@ func (p *Parser) scanGCode() (*GCode, error) {
 	var w Word
 	var err error
 	for n.tok == TokenWord {
-		w.Type = byte(n.lit[0])
+		w.Type = n.lit[0]
 		n = p.scanIgnoreWhitespace()
 		if n.tok != TokenNumber {
 			return nil, n.unexpectedErr("a numeric value")
@@ -160,7 +171,7 @@ func (p *Parser) scanGCode() (*GCode, error) {
 
 func (p *Parser) scanCoordinates() (*Coordinates, error) {
 	n := p.scan()
-	name := n.lit
+	name := n.lit[1:]
 	start := n.pos
 	var end Pos
 	n = p.scanIgnoreWhitespace()
@@ -200,6 +211,33 @@ func (p *Parser) scanCoordinates() (*Coordinates, error) {
 	}, nil
 }
 
+func (p *Parser) scanSerial() (*SerialData, error) {
+	n := p.scan()
+	var d Direction
+	switch n.tok {
+	case TokenGT:
+		d = DirectionSend
+	case TokenLT:
+		d = DirectionRecv
+	default:
+		panic("scanSerial got unknown token: " + n.tok.String())
+	}
+	start := n.pos
+	n = p.scanIgnoreWhitespace()
+	if n.tok != TokenString {
+		return nil, n.unexpectedErr("a quoted string")
+	}
+	s, err := strconv.Unquote(n.lit)
+	if err != nil {
+		return nil, n.syntaxErr(err)
+	}
+	return &SerialData{
+		Data:      s,
+		Direction: d,
+		Node:      node{pos: start, end: n.end},
+	}, nil
+}
+
 // Parse will return the next Node, or an error.
 func (p *Parser) Parse() (Node, error) {
 	n := p.scan()
@@ -208,7 +246,7 @@ func (p *Parser) Parse() (Node, error) {
 	}
 	switch n.tok {
 	case TokenComment:
-		return &Comment{Node: n, Value: n.lit}, nil
+		return &Comment{Node: n, Value: n.lit[1:]}, nil
 	case TokenFlag:
 		p.unscan()
 		return p.scanFlag()
@@ -218,10 +256,9 @@ func (p *Parser) Parse() (Node, error) {
 	case TokenIdentifier:
 		p.unscan()
 		return p.scanCoordinates()
-	case TokenSent:
-		return &SerialData{Data: n.lit, Direction: DirectionSend, Node: n}, nil
-	case TokenRecv:
-		return &SerialData{Data: n.lit, Direction: DirectionRecv, Node: n}, nil
+	case TokenGT, TokenLT:
+		p.unscan()
+		return p.scanSerial()
 	case TokenEOF:
 		return nil, io.EOF
 	case TokenIllegal:

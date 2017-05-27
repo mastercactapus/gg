@@ -37,7 +37,7 @@ func TestParser(t *testing.T) {
 		}
 	})
 
-	test("Flag", `@foo=bar`, func(t *testing.T, n Node) {
+	test("Flag", `@foo="bar"`, func(t *testing.T, n Node) {
 		f, ok := n.(*Flag)
 		if !ok {
 			t.Fatalf("type = %T; want %T", n, &Flag{})
@@ -49,7 +49,7 @@ func TestParser(t *testing.T) {
 			t.Errorf("Value = %s; want bar", f.Value)
 		}
 	})
-	test("Flag", `@foo =bar ; what`, func(t *testing.T, n Node) {
+	test("Flag", `@foo ="bar" ; what`, func(t *testing.T, n Node) {
 		f, ok := n.(*Flag)
 		if !ok {
 			t.Fatalf("type = %T; want %T", n, &Flag{})
@@ -59,6 +59,18 @@ func TestParser(t *testing.T) {
 		}
 		if f.Value != "bar" {
 			t.Errorf("Value = %s; want bar", f.Value)
+		}
+	})
+	test("Flag", `@foo = "1ft 2\"" ; what`, func(t *testing.T, n Node) {
+		f, ok := n.(*Flag)
+		if !ok {
+			t.Fatalf("type = %T; want %T", n, &Flag{})
+		}
+		if f.Name != "foo" {
+			t.Errorf("Name = %s; want foo", f.Name)
+		}
+		if f.Value != `1ft 2"` {
+			t.Errorf("Value = %s; want %s", strconv.Quote(f.Value), strconv.Quote(`1ft 2"`))
 		}
 	})
 
@@ -81,7 +93,7 @@ func TestParser(t *testing.T) {
 		}
 	})
 
-	test("SerialData", `>foobar`, func(t *testing.T, n Node) {
+	test("SerialData", `>"foobar"`, func(t *testing.T, n Node) {
 		d, ok := n.(*SerialData)
 		if !ok {
 			t.Fatalf("type = %T; want %T", n, &Coordinates{})
@@ -93,7 +105,7 @@ func TestParser(t *testing.T) {
 			t.Errorf("Direction = %s; want DirectionSend", d.Direction.String())
 		}
 	})
-	test("SerialData", `>foobar;baz`, func(t *testing.T, n Node) {
+	test("SerialData", `>"foobar;baz"`, func(t *testing.T, n Node) {
 		d, ok := n.(*SerialData)
 		if !ok {
 			t.Fatalf("type = %T; want %T", n, &Coordinates{})
@@ -105,7 +117,7 @@ func TestParser(t *testing.T) {
 			t.Errorf("Direction = %s; want DirectionSend", d.Direction.String())
 		}
 	})
-	test("SerialData", `<foobar`, func(t *testing.T, n Node) {
+	test("SerialData", `<"foobar"`, func(t *testing.T, n Node) {
 		d, ok := n.(*SerialData)
 		if !ok {
 			t.Fatalf("type = %T; want %T", n, &Coordinates{})
@@ -131,7 +143,7 @@ func TestParser_Comment(t *testing.T) {
 		t.Fatalf("type = %T; want %T", n, &Comment{})
 	}
 	if c.Value != "hello" {
-		t.Errorf("Value = %s; want hello", c.Value)
+		t.Errorf("Value = %s; want \"hello\"", strconv.Quote(c.Value))
 	}
 }
 

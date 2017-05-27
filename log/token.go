@@ -7,18 +7,19 @@ type Token int
 const (
 	TokenComment Token = iota
 	TokenWord
-	TokenSent
-	TokenRecv
-	TokenZero
 	TokenLBrace
 	TokenRBrace
 	TokenComma
 	TokenNumber
 	TokenFlag
-	TokenValue
+	TokenString
+	TokenEquals
+	TokenGT
+	TokenLT
 	TokenIdentifier
 	TokenWhitespace
 	TokenNewLine
 	TokenIllegal
+	TokenUnterminatedString
 	TokenEOF // Returned when the reader reaches EOF
 )
