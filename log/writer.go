@@ -1,11 +1,12 @@
 package log
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/mastercactapus/gg/gcode"
 )
 
 type FormatError struct {
@@ -33,7 +34,7 @@ func commentString(value string) string {
 	if value == "" {
 		return ""
 	}
-	return " ; " + strings.Replace(value, "\n", " ", -1) + "\n"
+	return " ; " + strings.Replace(value, "\n", " ", -1)
 }
 
 func (w *Writer) Comment(value string) error {
@@ -58,16 +59,12 @@ func (w *Writer) Flag(name, value, comment string) error {
 	return err
 }
 
-func (w *Writer) GCode(words []Word) error {
-	if len(words) == 0 {
+func (w *Writer) GCode(l gcode.Line) error {
+	if len(l) == 0 {
 		return nil
 	}
-	buf := new(bytes.Buffer)
-	for _, w := range words {
-		fmt.Fprintf(buf, "%c%f", w.Type, w.Value)
-	}
 
-	_, err := io.WriteString(w.w, buf.String()+"\n")
+	_, err := io.WriteString(w.w, l.String()+"\n")
 	return err
 }
 

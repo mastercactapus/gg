@@ -1,10 +1,6 @@
 package gg
 
-import (
-	"fmt"
-
-	"github.com/Sirupsen/logrus"
-)
+import "github.com/mastercactapus/gg/gcode"
 
 var (
 	FeedRateX = 600.0
@@ -20,23 +16,25 @@ var (
 	zPos = 0.0
 )
 
+var lines []gcode.Line
+
 func CurrentZ() float64 {
 	return zPos
 }
 
-func feedRate(words []Word) float64 {
+func feedRate(l gcode.Line) float64 {
 	rate := 0.0
-	for _, w := range words {
+	for _, w := range l {
 		switch w.Type {
-		case WordTypeX:
+		case 'X':
 			if rate == 0.0 || rate > FeedRateX {
 				rate = FeedRateX
 			}
-		case WordTypeY:
+		case 'Y':
 			if rate == 0.0 || rate > FeedRateY {
 				rate = FeedRateY
 			}
-		case WordTypeZ:
+		case 'Z':
 			if rate == 0.0 || rate > FeedRateZ {
 				rate = FeedRateZ
 			}
@@ -45,32 +43,17 @@ func feedRate(words []Word) float64 {
 	return rate
 }
 
-func hasWord(words []Word, t WordType) bool {
-	for _, w := range words {
-		if w.Type == t {
-			return true
-		}
-	}
-	return false
-}
-func withFeed(words []Word) []Word {
-	if hasWord(words, WordTypeF) {
-		return words
+func withFeed(l gcode.Line) gcode.Line {
+	if l.HasWord('F') {
+		return l
 	}
 
-	return append(words, F(feedRate(words)))
+	return append(l, F(feedRate(l)))
 }
-func val(words []Word, t WordType) float64 {
-	for _, w := range words {
-		if w.Type == t {
-			return w.Value
-		}
-	}
-	return 0
-}
-func withoutType(words []Word, t WordType) []Word {
-	res := words[:0]
-	for _, w := range words {
+
+func withoutType(l gcode.Line, t byte) gcode.Line {
+	res := l[:0]
+	for _, w := range l {
 		if w.Type == t {
 			continue
 		}
@@ -78,30 +61,22 @@ func withoutType(words []Word, t WordType) []Word {
 	}
 	return res
 }
-func print(t CodeType, n float64, w []Word) {
-	printCode(Code{Type: t, Number: n, Words: w})
-}
-func printCode(c Code) {
 
-	if !setUnits && (c.Type != CodeTypeG || (c.Number != 21 && c.Number != 20)) {
-		logrus.Warnln("Units unspecified, defaulting to mm.")
-		print(CodeTypeG, 21, nil)
-	}
-
-	if c.Type != CodeTypeG {
-		fmt.Println(c.String())
+func print(l gcode.Line) {
+	if l[0].Type != 'G' {
+		lines = append(lines, l)
 		return
 	}
 
-	if hasWord(c.Words, WordTypeZ) {
+	if l.HasWord('Z') {
 		if absMode {
-			zPos = val(c.Words, WordTypeZ)
+			zPos = l.Value('Z')
 		} else {
-			zPos += val(c.Words, WordTypeZ)
+			zPos += l.Value('Z')
 		}
 	}
 
-	switch c.Number {
+	switch l[0].Value {
 	case 21, 20:
 		setUnits = true
 	case 90:
@@ -118,28 +93,33 @@ func printCode(c Code) {
 		firstAbs = false
 
 	case 1, 2, 3:
-		f := val(c.Words, WordTypeF)
+		l = withFeed(l)
+
+		f := l.Value('F')
 		if f == lastFeed {
-			c.Words = withoutType(c.Words, WordTypeF)
+			l = withoutType(l, 'F')
 		} else if f != 0 {
 			lastFeed = f
 		}
 	}
 
-	// if lastNum == c.Number && (c.Number == 0 || c.Number == 1) {
-	// 	fmt.Println(wordsString(c.Words))
-	// 	return
-	// }
+	lastNum = l[0].Value
 
-	lastNum = c.Number
-
-	fmt.Println(c.String())
+	lines = append(lines, l)
 }
 
-func G21()             { print(CodeTypeG, 21, nil) }
-func G90()             { print(CodeTypeG, 90, nil) }
-func G91()             { print(CodeTypeG, 91, nil) }
-func G0(words ...Word) { print(CodeTypeG, 0, words) }
-func G1(words ...Word) { print(CodeTypeG, 1, withFeed(words)) }
-func G2(words ...Word) { print(CodeTypeG, 2, withFeed(words)) }
-func G3(words ...Word) { print(CodeTypeG, 3, withFeed(words)) }
+func G90()                   { print(gcode.Line{{'G', 90}}) }
+func G91()                   { print(gcode.Line{{'G', 91}}) }
+func G0(words ...gcode.Word) { print(append(gcode.Line{{'G', 0}}, words...)) }
+func G1(words ...gcode.Word) { print(append(gcode.Line{{'G', 1}}, words...)) }
+func G2(words ...gcode.Word) { print(append(gcode.Line{{'G', 2}}, words...)) }
+func G3(words ...gcode.Word) { print(append(gcode.Line{{'G', 3}}, words...)) }
+
+func X(val float64) gcode.Word { return gcode.Word{Type: 'X', Value: val} }
+func Y(val float64) gcode.Word { return gcode.Word{Type: 'Y', Value: val} }
+func Z(val float64) gcode.Word { return gcode.Word{Type: 'Z', Value: val} }
+
+func F(val float64) gcode.Word { return gcode.Word{Type: 'F', Value: val} }
+
+func I(val float64) gcode.Word { return gcode.Word{Type: 'I', Value: val} }
+func J(val float64) gcode.Word { return gcode.Word{Type: 'J', Value: val} }

@@ -1,5 +1,7 @@
 package log
 
+import "github.com/mastercactapus/gg/gcode"
+
 // The Node interface is implemented by all node types.
 type Node interface {
 	Pos() Pos
@@ -42,15 +44,7 @@ type Flag struct {
 type GCode struct {
 	Node
 
-	Words []Word
-}
-
-// A Word is a single command, param, or coordinate in GCode.
-//
-// For example `G21` would have a Type of `G` and Value of `21`.
-type Word struct {
-	Type  byte
-	Value float64
+	Words []gcode.Word
 }
 
 // Coordinates are used to log positions of the machine.

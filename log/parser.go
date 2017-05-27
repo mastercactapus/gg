@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+
+	"github.com/mastercactapus/gg/gcode"
 )
 
 // Parser uses a Scanner to provide a stream of Nodes via
@@ -133,8 +135,8 @@ func (p *Parser) scanGCode() (*GCode, error) {
 	n := p.scan()
 	start := n.pos
 	var end Pos
-	words := make([]Word, 0, 10)
-	var w Word
+	words := make([]gcode.Word, 0, 10)
+	var w gcode.Word
 	var err error
 	for n.tok == TokenWord {
 		w.Type = n.lit[0]

@@ -73,7 +73,7 @@ func (sf unitFlag) String() string {
 		return ""
 	}
 
-	return fmt.Sprintf("%.3fmm", sf.value)
+	return strconv.FormatFloat(sf.value, 'f', -1, 64) + "mm"
 }
 
 // ParamUnit will define a new unit/measurement program parameter with the given name and description.
