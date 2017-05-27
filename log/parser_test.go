@@ -2,6 +2,7 @@ package log
 
 import (
 	"bytes"
+	"io"
 	"strconv"
 	"testing"
 )
@@ -117,4 +118,33 @@ func TestParser(t *testing.T) {
 		}
 	})
 
+}
+
+func TestParser_Comment(t *testing.T) {
+	p := NewParser(bytes.NewBufferString(";hello"), &ParserConfig{PreserveComments: true})
+	n, err := p.Parse()
+	if err != nil {
+		t.Fatalf("err = %v; want nil", err)
+	}
+	c, ok := n.(*Comment)
+	if !ok {
+		t.Fatalf("type = %T; want %T", n, &Comment{})
+	}
+	if c.Value != "hello" {
+		t.Errorf("Value = %s; want hello", c.Value)
+	}
+}
+
+func TestParser_EOF(t *testing.T) {
+	p := NewParser(bytes.NewBufferString(""), &ParserConfig{PreserveComments: true})
+	_, err := p.Parse()
+	if err != io.EOF {
+		t.Errorf("err = %v; want %v", err, io.EOF)
+	}
+
+	p = NewParser(bytes.NewBufferString("   \n \t"), &ParserConfig{PreserveComments: true})
+	_, err = p.Parse()
+	if err != io.EOF {
+		t.Errorf("err = %v; want %v", err, io.EOF)
+	}
 }
