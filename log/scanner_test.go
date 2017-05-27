@@ -47,12 +47,12 @@ _ZERO{1,2}
 		Literal   string
 	}{
 		{1, 1, TokenNewLine, "\n"},
-		{2, 1, TokenComment, "; hi"},
+		{2, 1, TokenLineComment, "; hi"},
 		{2, 5, TokenNewLine, "\n"},
 		{3, 1, TokenFlag, "@foo"},
 		{3, 5, TokenEquals, "="},
 		{3, 6, TokenString, `"bar"`},
-		{3, 11, TokenComment, ";ok"},
+		{3, 11, TokenLineComment, ";ok"},
 		{3, 14, TokenNewLine, "\n"},
 		{4, 1, TokenWord, "G"},
 		{4, 2, TokenNumber, "21"},

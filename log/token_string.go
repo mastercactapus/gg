@@ -4,9 +4,9 @@ package log
 
 import "fmt"
 
-const _Token_name = "TokenCommentTokenWordTokenLBraceTokenRBraceTokenCommaTokenNumberTokenFlagTokenStringTokenEqualsTokenGTTokenLTTokenIdentifierTokenWhitespaceTokenNewLineTokenIllegalTokenUnterminatedStringTokenEOF"
+const _Token_name = "TokenLineCommentTokenBlockCommentTokenWordTokenLBraceTokenRBraceTokenCommaTokenNumberTokenFlagTokenStringTokenEqualsTokenGTTokenLTTokenIdentifierTokenWhitespaceTokenNewLineTokenIllegalTokenUnterminatedStringTokenEOF"
 
-var _Token_index = [...]uint8{0, 12, 21, 32, 43, 53, 64, 73, 84, 95, 102, 109, 124, 139, 151, 163, 186, 194}
+var _Token_index = [...]uint8{0, 16, 33, 42, 53, 64, 74, 85, 94, 105, 116, 123, 130, 145, 160, 172, 184, 207, 215}
 
 func (i Token) String() string {
 	if i < 0 || i >= Token(len(_Token_index)-1) {

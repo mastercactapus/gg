@@ -12,7 +12,7 @@ func TestParser(t *testing.T) {
 	test := func(name, data string, f func(t *testing.T, n Node)) {
 		t.Run(name, func(t *testing.T) {
 			t.Logf("data = %s", strconv.Quote(data))
-			p := NewParser(bytes.NewBufferString(data), nil)
+			p := NewParser(bytes.NewBufferString(data))
 			n, err := p.Parse()
 			if err != nil {
 				t.Fatalf("err = %v; want nil", err)
@@ -34,6 +34,27 @@ func TestParser(t *testing.T) {
 		}
 		if g.Words[0].Value != 21 {
 			t.Errorf("Words[0].Value = %f; want 21", g.Words[0].Value)
+		}
+	})
+	test("GCode", `G21 (hi) Y2`, func(t *testing.T, n Node) {
+		g, ok := n.(*GCode)
+		if !ok {
+			t.Fatalf("type = %T; want %T", n, &GCode{})
+		}
+		if len(g.Words) != 2 {
+			t.Fatalf("len(Words) = %d; want 2", len(g.Words))
+		}
+		if g.Words[0].Type != 'G' {
+			t.Errorf("Words[0].Type = %c; want G", g.Words[0].Type)
+		}
+		if g.Words[0].Value != 21 {
+			t.Errorf("Words[0].Value = %f; want 21", g.Words[0].Value)
+		}
+		if g.Words[1].Type != 'Y' {
+			t.Errorf("Words[1].Type = %c; want Y", g.Words[0].Type)
+		}
+		if g.Words[1].Value != 2 {
+			t.Errorf("Words[1].Value = %f; want 2", g.Words[0].Value)
 		}
 	})
 
@@ -132,29 +153,14 @@ func TestParser(t *testing.T) {
 
 }
 
-func TestParser_Comment(t *testing.T) {
-	p := NewParser(bytes.NewBufferString(";hello"), &ParserConfig{PreserveComments: true})
-	n, err := p.Parse()
-	if err != nil {
-		t.Fatalf("err = %v; want nil", err)
-	}
-	c, ok := n.(*Comment)
-	if !ok {
-		t.Fatalf("type = %T; want %T", n, &Comment{})
-	}
-	if c.Value != "hello" {
-		t.Errorf("Value = %s; want \"hello\"", strconv.Quote(c.Value))
-	}
-}
-
 func TestParser_EOF(t *testing.T) {
-	p := NewParser(bytes.NewBufferString(""), &ParserConfig{PreserveComments: true})
+	p := NewParser(bytes.NewBufferString(""))
 	_, err := p.Parse()
 	if err != io.EOF {
 		t.Errorf("err = %v; want %v", err, io.EOF)
 	}
 
-	p = NewParser(bytes.NewBufferString("   \n \t"), &ParserConfig{PreserveComments: true})
+	p = NewParser(bytes.NewBufferString("   \n \t"))
 	_, err = p.Parse()
 	if err != io.EOF {
 		t.Errorf("err = %v; want %v", err, io.EOF)

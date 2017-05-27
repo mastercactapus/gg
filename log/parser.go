@@ -12,12 +12,6 @@ type Parser struct {
 	s   *Scanner
 	buf node
 	n   int
-	c   ParserConfig
-}
-
-// ParserConfig allows setting options for a Parser.
-type ParserConfig struct {
-	PreserveComments bool // If true, the Parse() method will emit rather than skip Comments.
 }
 
 // IllegalTokenError is returned if an IllegalToken is encountered.
@@ -86,12 +80,8 @@ func (n node) syntaxErr(cause error) error {
 }
 
 // NewParser creates a new Parser consuming the io.Reader, and using the optional ParserConfig.
-func NewParser(r io.Reader, c *ParserConfig) *Parser {
-	p := &Parser{s: NewScanner(r)}
-	if c != nil {
-		p.c = *c
-	}
-	return p
+func NewParser(r io.Reader) *Parser {
+	return &Parser{s: NewScanner(r)}
 }
 
 func (p *Parser) scan() node {
@@ -110,7 +100,7 @@ func (p *Parser) unscan() { p.n = 1 }
 
 func (p *Parser) scanIgnoreWhitespace() (n node) {
 	n = p.scan()
-	if n.tok == TokenWhitespace {
+	for n.tok == TokenWhitespace || n.tok == TokenBlockComment {
 		n = p.scan()
 	}
 	return n
@@ -240,13 +230,11 @@ func (p *Parser) scanSerial() (*SerialData, error) {
 
 // Parse will return the next Node, or an error.
 func (p *Parser) Parse() (Node, error) {
-	n := p.scan()
-	for (n.tok == TokenWhitespace || n.tok == TokenNewLine) || (n.tok == TokenComment && !p.c.PreserveComments) {
-		n = p.scan()
+	n := p.scanIgnoreWhitespace()
+	for n.tok == TokenNewLine {
+		n = p.scanIgnoreWhitespace()
 	}
 	switch n.tok {
-	case TokenComment:
-		return &Comment{Node: n, Value: n.lit[1:]}, nil
 	case TokenFlag:
 		p.unscan()
 		return p.scanFlag()

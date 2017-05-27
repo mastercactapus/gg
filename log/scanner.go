@@ -163,6 +163,26 @@ func (s *Scanner) scanString() (tok Token, lit string) {
 	return TokenString, buf.String()
 }
 
+func (s *Scanner) scanBlockComment() (tok Token, lit string) {
+	var buf bytes.Buffer
+	buf.WriteRune(s.read())
+	var ch rune
+	for {
+		ch = s.read()
+		if ch == eof || !isLine(ch) {
+			break
+		}
+		buf.WriteRune(ch)
+		if ch == ')' {
+			break
+		}
+	}
+	if ch != ')' {
+		return TokenIllegal, buf.String()
+	}
+	return TokenBlockComment, buf.String()
+}
+
 // Scan will return the next Token and its literal value.
 func (s *Scanner) Scan() (tok Token, lit string) {
 	ch := s.read()
@@ -184,6 +204,9 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 	switch ch {
 	case '\n':
 		return TokenNewLine, "\n"
+	case '(':
+		s.unread()
+		return s.scanBlockComment()
 	case '@':
 		s.unread()
 		return s.scanFlag()
@@ -204,7 +227,7 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 		return TokenLT, "<"
 	case ';':
 		s.unread()
-		return s.scanType(TokenComment, isLine)
+		return s.scanType(TokenLineComment, isLine)
 	case '_':
 		s.unread()
 		return s.scanType(TokenIdentifier, isID)

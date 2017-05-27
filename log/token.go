@@ -5,7 +5,8 @@ type Token int
 
 // Token types
 const (
-	TokenComment Token = iota
+	TokenLineComment Token = iota
+	TokenBlockComment
 	TokenWord
 	TokenLBrace
 	TokenRBrace
