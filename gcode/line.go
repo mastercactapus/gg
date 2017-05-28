@@ -13,6 +13,16 @@ func (l Line) String() string {
 	return strings.Join(s, "")
 }
 
+func (l Line) Modal() string {
+	if len(l) == 0 {
+		return ""
+	}
+	if l[0].Type == 'G' || l[0].Type == 'M' {
+		return l[0].String()
+	}
+	return ""
+}
+
 func (l Line) HasWord(t byte) bool {
 	for _, w := range l {
 		if w.Type == t {

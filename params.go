@@ -15,11 +15,15 @@ type unitFlag struct {
 	value float64
 }
 
+type SavableValue interface {
+	IsSet() bool
+}
+
 var paramNames []string
 
 var (
-	unitRx         = regexp.MustCompile(`^(\d+)\s*(mm|cm|inch|inches|in|"|'|ft|foot|feet)\.?$`)
-	compoundUnitRx = regexp.MustCompile(`^(\d+)\s*(?:ft|foot|feet|')\.?\s*(\d+)\s*(?:in|inch|inches|")\.?$`)
+	unitRx         = regexp.MustCompile(`^([0-9.]+)\s*(mm|cm|inch|inches|in|"|'|ft|foot|feet)\.?$`)
+	compoundUnitRx = regexp.MustCompile(`^([0-9.]+)\s*(?:ft|foot|feet|')\.?\s*([0-9.]+)\s*(?:in|inch|inches|")\.?$`)
 )
 
 // parseUnitString will attempt to parse a string value and convert it to mm.
@@ -58,7 +62,9 @@ func parseUnitString(s string) (float64, error) {
 
 	return 0, fmt.Errorf("failed to parse measurement '%s'", s)
 }
-
+func (sf unitFlag) IsSet() bool {
+	return sf.set
+}
 func (sf *unitFlag) Set(s string) error {
 	val, err := parseUnitString(s)
 	if err != nil {

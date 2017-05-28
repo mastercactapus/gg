@@ -9,6 +9,7 @@ func TestParseUnitString(t *testing.T) {
 		exp       float64
 	}{
 		{"mm", "1mm", 1},
+		{"mm", "6.3mm", 6.3},
 		{"cm", "1cm", 10},
 		{"inch", "1in", 25.4},
 		{"inch abbrv", "1\"", 25.4},
@@ -20,8 +21,8 @@ func TestParseUnitString(t *testing.T) {
 		{"ft abbrv", "1'", 304.8},
 		{"ft abbrv", "1feet", 304.8},
 		{"ft full", "1Foot", 304.8},
-		{"compound", "1' 2inch", 355.6},
-		{"compound", "1foot 2inch", 355.6},
+		{"compound", "1.6' 2inch", 538.48},
+		{"compound", "1foot 2.3inch", 363.22},
 		{"compound", "1ft 2inch", 355.6},
 		{"compound", "1ft 2inch", 355.6},
 		{"compound", "1ft. 2inch", 355.6},

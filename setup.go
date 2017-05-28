@@ -3,8 +3,10 @@ package gg
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/mastercactapus/gg/gcode"
 	"github.com/mastercactapus/gg/log"
@@ -25,6 +27,9 @@ func failf(s string, args ...interface{}) {
 }
 
 func Run(f func()) {
+	if *resume {
+		return
+	}
 	err := l.Comment("Run(): Generate GCode")
 	if err != nil {
 		failf("failed to write to log: %v", err)
@@ -47,6 +52,29 @@ func Run(f func()) {
 
 }
 
+func resumeState(r io.Reader) error {
+	p := log.NewParser(r)
+
+	node, err := p.Parse()
+	for err == nil {
+		switch n := node.(type) {
+		case *log.Flag:
+			err = flag.Set(n.Name, n.Value)
+		case *log.GCode:
+			lines = append(lines, n.Line)
+		}
+		if err != nil {
+			return err
+		}
+		node, err = p.Parse()
+	}
+	if err != io.EOF {
+		return err
+	}
+
+	return l.Comment("Resume " + time.Now().String())
+}
+
 // Setup will parse parameters, ask for input (where required) and make things
 // ready to start processing G-Code commands.
 func Setup(c Config) {
@@ -67,12 +95,27 @@ func Setup(c Config) {
 		flags = os.O_RDWR | os.O_CREATE
 	}
 
+	if *resume {
+		flag.Visit(func(f *flag.Flag) {
+			if _, ok := f.Value.(SavableValue); !ok {
+				return
+			}
+			failf("%s was set; do not set flags when resuming, re-generate GCode instead", f.Name)
+		})
+	}
+
 	if *run {
 		fd, err := os.OpenFile(*logFile, flags, 0666)
 		if err != nil {
 			failf("failed to open log file: %v", err)
 		}
 		l = log.NewWriter(fd)
+		if *resume {
+			err = resumeState(fd)
+			if err != nil {
+				failf("failed to resume state: %v", err)
+			}
+		}
 	} else {
 		l = log.NewWriter(ioutil.Discard)
 	}
@@ -94,12 +137,17 @@ func Setup(c Config) {
 	if err != nil {
 		failf("failed to log to file: %v", err)
 	}
-	for _, p := range paramNames {
-		f := flag.Lookup(p)
-		err = l.Flag(f.Name, f.Value.String(), "default: "+f.DefValue)
-		if err != nil {
-			failf("failed to log param: %v", err)
-		}
-	}
 
+	if !*resume {
+		// save current parameter values
+		flag.VisitAll(func(f *flag.Flag) {
+			if _, ok := f.Value.(SavableValue); !ok {
+				return
+			}
+			err = l.Flag(f.Name, f.Value.String(), "default: "+f.DefValue)
+			if err != nil {
+				failf("failed to log param: %v", err)
+			}
+		})
+	}
 }

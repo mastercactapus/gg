@@ -108,18 +108,77 @@ func print(l gcode.Line) {
 	lines = append(lines, l)
 }
 
-func G90()                   { print(gcode.Line{{'G', 90}}) }
-func G91()                   { print(gcode.Line{{'G', 91}}) }
-func G0(words ...gcode.Word) { print(append(gcode.Line{{'G', 0}}, words...)) }
-func G1(words ...gcode.Word) { print(append(gcode.Line{{'G', 1}}, words...)) }
-func G2(words ...gcode.Word) { print(append(gcode.Line{{'G', 2}}, words...)) }
-func G3(words ...gcode.Word) { print(append(gcode.Line{{'G', 3}}, words...)) }
+// G90 sets distance to absolute mode
+func G90() { print(gcode.Line{{Type: 'G', Value: 90}}) }
 
-func X(val float64) gcode.Word { return gcode.Word{Type: 'X', Value: val} }
-func Y(val float64) gcode.Word { return gcode.Word{Type: 'Y', Value: val} }
-func Z(val float64) gcode.Word { return gcode.Word{Type: 'Z', Value: val} }
+// G91 sets distance to relative mode
+func G91() { print(gcode.Line{{Type: 'G', Value: 91}}) }
 
+// G93 sets the feed rate to inverse time mode instead of units
+// per minute.
+//
+// The feed rate is calculated as 1/F.
+//
+// For example, in inverse mode a feed rate of 2.0 means a move
+// should be completed in 1/2 minute (or 30 seconds).
+//
+// Feed rates are required for all G1, G2, and G3 commands while
+// in this mode.
+func G93() { print(gcode.Line{{Type: 'G', Value: 93}}) }
+
+// G94 sets the feed rate to units per minute mode.
+//
+// The time for a move to complete depends on the total distance
+// traveled with the feed rate in consideration.
+func G94() { print(gcode.Line{{Type: 'G', Value: 94}}) }
+
+// G0 is for rapid motion.
+func G0(words ...gcode.Word) { print(append(gcode.Line{{Type: 'G', Value: 0}}, words...)) }
+
+// G1 is for linear (straight line) motion at a set rate.
+func G1(words ...gcode.Word) { print(append(gcode.Line{{Type: 'G', Value: 1}}, words...)) }
+
+// G2 is used to make circular or helical movements *clockwise*.
+func G2(words ...gcode.Word) { print(append(gcode.Line{{Type: 'G', Value: 2}}, words...)) }
+
+// G3 is used to make circular or helical movements *counter-clockwise*.
+func G3(words ...gcode.Word) { print(append(gcode.Line{{Type: 'G', Value: 3}}, words...)) }
+
+// F controls feed rate
 func F(val float64) gcode.Word { return gcode.Word{Type: 'F', Value: val} }
 
+// I is the X Axis offset when doing arcs (G2,G3)
 func I(val float64) gcode.Word { return gcode.Word{Type: 'I', Value: val} }
+
+// J is the Y Axis offset when doing arcs (G2,G3)
 func J(val float64) gcode.Word { return gcode.Word{Type: 'J', Value: val} }
+
+// K is the Z Axis offset when doing arcs (G2,G3)
+func K(val float64) gcode.Word { return gcode.Word{Type: 'K', Value: val} }
+
+// L is used for G10 or canned cycle parameters
+func L(val uint8) gcode.Word { return gcode.Word{Type: 'L', Value: float64(val)} }
+
+// N is used to denote line number
+func N(val int32) gcode.Word { return gcode.Word{Type: 'N', Value: float64(val)} }
+
+// P is used for G10 and dwell (G4) parameters
+func P(val float64) gcode.Word { return gcode.Word{Type: 'P', Value: val} }
+
+// R is the arc radius (G2,G3)
+func R(val float64) gcode.Word { return gcode.Word{Type: 'R', Value: val} }
+
+// S controls the spindle speed
+func S(val float64) gcode.Word { return gcode.Word{Type: 'S', Value: val} }
+
+// T is used for tool selection
+func T(val float64) gcode.Word { return gcode.Word{Type: 'T', Value: val} }
+
+// X is used for the X coordinates
+func X(val float64) gcode.Word { return gcode.Word{Type: 'X', Value: val} }
+
+// Y is used for Y coordinates
+func Y(val float64) gcode.Word { return gcode.Word{Type: 'Y', Value: val} }
+
+// Z is used for Z coordinates
+func Z(val float64) gcode.Word { return gcode.Word{Type: 'Z', Value: val} }

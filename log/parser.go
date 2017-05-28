@@ -135,7 +135,7 @@ func (p *Parser) scanGCode() (*GCode, error) {
 	n := p.scan()
 	start := n.pos
 	var end Pos
-	words := make([]gcode.Word, 0, 10)
+	line := make(gcode.Line, 0, 10)
 	var w gcode.Word
 	var err error
 	for n.tok == TokenWord {
@@ -149,15 +149,15 @@ func (p *Parser) scanGCode() (*GCode, error) {
 		if err != nil {
 			return nil, n.syntaxErr(err)
 		}
-		words = append(words, w)
+		line = append(line, w)
 		end = n.end
 		n = p.scanIgnoreWhitespace()
 	}
 	p.unscan()
 
 	return &GCode{
-		Node:  node{pos: start, end: end},
-		Words: words,
+		Node: node{pos: start, end: end},
+		Line: line,
 	}, nil
 }
 
@@ -233,7 +233,7 @@ func (p *Parser) scanSerial() (*SerialData, error) {
 // Parse will return the next Node, or an error.
 func (p *Parser) Parse() (Node, error) {
 	n := p.scanIgnoreWhitespace()
-	for n.tok == TokenNewLine {
+	for n.tok == TokenNewLine || n.tok == TokenLineComment {
 		n = p.scanIgnoreWhitespace()
 	}
 	switch n.tok {
@@ -255,5 +255,5 @@ func (p *Parser) Parse() (Node, error) {
 		return nil, n.illegalErr()
 	}
 
-	return nil, n.unexpectedErr("flag, gcode, send, recv, comment, or EOF")
+	return nil, n.unexpectedErr("flag, gcode, send, recv, or EOF")
 }

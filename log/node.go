@@ -44,7 +44,7 @@ type Flag struct {
 type GCode struct {
 	Node
 
-	Words []gcode.Word
+	Line gcode.Line
 }
 
 // Coordinates are used to log positions of the machine.
