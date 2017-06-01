@@ -2,6 +2,17 @@ package log
 
 import "github.com/mastercactapus/gg/gcode"
 
+//go:generate stringer -type Direction
+
+// Direction is used to differentiate the data-flow direction of SerialData.
+type Direction int
+
+// Directions can be send (tx) or receive (rx)
+const (
+	DirectionSend Direction = iota
+	DirectionRecv
+)
+
 // The Node interface is implemented by all node types.
 type Node interface {
 	Pos() Pos
@@ -58,15 +69,6 @@ type Coordinates struct {
 	ID     string
 	Values []float64
 }
-
-// Direction is used to differentiate the data-flow direction of SerialData.
-type Direction int
-
-// Directions can be send (tx) or receive (rx)
-const (
-	DirectionSend Direction = iota
-	DirectionRecv
-)
 
 // SerialData is a log of functional data sent over the wire between the CNC controller and software.
 //

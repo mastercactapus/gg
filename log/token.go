@@ -1,5 +1,7 @@
 package log
 
+//go:generate stringer -type Token
+
 // Token represents a parseable token from a log file.
 type Token int
 
