@@ -5,9 +5,9 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/mastercactapus/gg/gcode"
+	"github.com/mastercactapus/gg/log"
 	"github.com/pkg/errors"
 )
 
@@ -15,7 +15,7 @@ const grblBufSize = 127
 
 type Conn struct {
 	rwc        io.ReadWriteCloser
-	grblBuffer []string
+	grblBuffer []Response
 
 	queue []string
 
@@ -26,14 +26,21 @@ type Conn struct {
 	errs            chan error
 	ioErr           chan error
 	realtimeQueueCh chan byte
-	recv            chan string
+	recv            chan Response
 	machineStatusCh chan *Status
 	closeCh         chan struct{}
+
+	w *log.Writer
 }
 
 // A FatalError is one that the connection cannot recover from (e.g. i/o error)
 type FatalError struct {
 	Cause error
+}
+
+type Response struct {
+	Sent string
+	Data []string
 }
 
 func (f FatalError) Error() string {
@@ -48,7 +55,7 @@ func NewConn(rwc io.ReadWriteCloser) *Conn {
 		recvQueueCh:     make(chan string, 100),
 		sendQueueCh:     make(chan string, 10000),
 		errs:            make(chan error, 100),
-		recv:            make(chan string, 10000),
+		recv:            make(chan Response, 10000),
 		realtimeQueueCh: make(chan byte),
 		machineStatusCh: make(chan *Status),
 
@@ -58,7 +65,9 @@ func NewConn(rwc io.ReadWriteCloser) *Conn {
 	go c.loop()
 	return c
 }
-
+func (c *Conn) SetLogger(w *log.Writer) {
+	c.w = w
+}
 func (c *Conn) readLoop() {
 	r := bufio.NewReader(c.rwc)
 	var err error
@@ -77,21 +86,23 @@ func (c *Conn) readLoop() {
 func (c *Conn) fillGrbl() {
 	s := 0
 	for _, n := range c.grblBuffer {
-		s += len(n)
+		s += len(n.Sent)
 	}
 
 	gap := grblBufSize - s
 	var err error
 	for len(c.queue) > 0 && gap > len(c.queue[0]) {
-		c.recv <- "W:" + strconv.Quote(c.queue[0])
 		_, err = c.rwc.Write([]byte(c.queue[0]))
 		if err != nil {
 			c.ioErr <- err
 			return
 		}
+		if c.w != nil {
+			c.w.SerialSend(c.queue[0])
+		}
 
 		gap -= len(c.queue[0])
-		c.grblBuffer = append(c.grblBuffer, c.queue[0])
+		c.grblBuffer = append(c.grblBuffer, Response{Sent: c.queue[0]})
 
 		copy(c.queue, c.queue[1:])
 		c.queue = c.queue[:len(c.queue)-1]
@@ -238,26 +249,31 @@ func (c *Conn) loop() {
 				c.errs <- &FatalError{Cause: err}
 				return
 			}
+
 			// TODO: deal with effects (like jog cancel - flushing the jog buffer)
 		case err = <-c.ioErr:
 			c.errs <- &FatalError{Cause: err}
 			return
 		case data = <-c.recvQueueCh:
-			if len(data) == 0 {
-				continue
-			}
-
-			if data[0] == '<' {
+			if len(data) > 0 && data[0] == '<' {
 				c.parseMachineStatus(data)
 				continue
 			}
+			if len(c.grblBuffer) == 0 {
+				// previous response
+				return
+			}
+			if c.w != nil {
+				c.w.SerialRecv(data)
+			}
+			c.grblBuffer[0].Data = append(c.grblBuffer[0].Data, data)
 
-			if data == "ok" && len(c.grblBuffer) > 0 {
+			if data == "ok" {
+				c.recv <- c.grblBuffer[0]
 				copy(c.grblBuffer, c.grblBuffer[1:])
 				c.grblBuffer = c.grblBuffer[:len(c.grblBuffer)-1]
 			}
 
-			c.recv <- "R:" + strconv.Quote(data)
 			c.fillGrbl()
 		case data = <-c.sendQueueCh:
 			c.queue = append(c.queue, data)
@@ -266,20 +282,15 @@ func (c *Conn) loop() {
 	}
 }
 
-func (c *Conn) Status() *Status {
+func (c *Conn) Status() {
 	c.realtimeQueueCh <- '?'
-	return <-c.machineStatusCh
 }
 
-func (c *Conn) Recv() chan string {
-	go func() {
-		c.realtimeQueueCh <- '\n'
-		time.Sleep(time.Second * 3)
-		c.realtimeQueueCh <- '?'
-		c.realtimeQueueCh <- '?'
-		time.Sleep(time.Second)
-		c.sendQueueCh <- "$\n"
-	}()
+func (c *Conn) RecvStatus() chan *Status {
+	return c.machineStatusCh
+}
+
+func (c *Conn) Recv() chan Response {
 	return c.recv
 }
 
