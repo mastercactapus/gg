@@ -8,13 +8,19 @@ import (
 	"os"
 	"time"
 
+	serial "go.bug.st/serial.v1"
+
 	"github.com/mastercactapus/gg/gcode"
+	"github.com/mastercactapus/gg/grbl"
 	"github.com/mastercactapus/gg/log"
+	"github.com/mastercactapus/gg/ui"
 )
 
 var (
 	logFile = flag.String("log", "job.log", "Log file to use when in job mode -- will not overwrite unless -f is set.")
 	run     = flag.Bool("run", false, "Run a job. Instead of printing GCode, launches the UI to execute it.")
+	port    = flag.String("port", "", "Serial port to use.")
+	rate    = flag.Int("b", 115200, "Baudrate of the serial port.")
 	resume  = flag.Bool("resume", false, "Resume an existing log (implies -run).")
 	l       *log.Writer
 )
@@ -28,6 +34,22 @@ func failf(s string, args ...interface{}) {
 
 func Run(f func()) {
 	if *resume {
+		p, err := serial.Open(*port, &serial.Mode{BaudRate: *rate})
+		if err != nil {
+			failf("failed to open serial port: %v", err)
+		}
+
+		c := grbl.NewConn(p)
+		c.SetLogger(l)
+		u, err := ui.NewJobUI(c, lines)
+		if err != nil {
+			failf("failed to launch UI: %v", err)
+		}
+
+		err = u.Start()
+		if err != nil {
+			failf("UI crashed: %v", err)
+		}
 		return
 	}
 	err := l.Comment("Run(): Generate GCode")
@@ -49,7 +71,6 @@ func Run(f func()) {
 			fmt.Println(l.String())
 		}
 	}
-
 }
 
 func resumeState(r io.Reader) error {
