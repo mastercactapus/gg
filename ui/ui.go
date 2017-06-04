@@ -115,13 +115,14 @@ func (ui *UI) SetCell(x, y int, ch rune, fg, bg termbox.Attribute) {
 
 func (ui *UI) renderControls() {
 	sw, sh := termbox.Size()
-	b := newBoundedRenderer(ui, 0, 0, sw, sh)
+	bounds := Rect{Left: 0, Top: 0, Right: sw, Bottom: sh}
+	b := newBoundedRenderer(ui, bounds)
 	r := ui.r()
 	ui.rendered = ui.rendered[:0]
 	for _, c := range r {
 		ui.rendered = append(ui.rendered, renderedControl{
 			c: c,
-			r: b.RenderChild(0, 0, sw, sh, c),
+			r: b.RenderChild(bounds, c),
 		})
 	}
 	termbox.Flush()
@@ -133,5 +134,5 @@ type Screen interface {
 }
 type Renderer interface {
 	Screen
-	RenderChild(x, y, xMax, yMax int, c Control) Rect
+	RenderChild(bounds Rect, c Control) Rect
 }

@@ -6,92 +6,93 @@ type boundedRenderer struct {
 	Screen
 	x, y, xm, ym int
 
-	r Rect
+	b        Rect
+	drawRect Rect
 }
 
-func newBoundedRenderer(s Screen, x, y, xm, ym int) *boundedRenderer {
+func newBoundedRenderer(s Screen, bounds Rect) *boundedRenderer {
+	sw, sh := s.Size()
+	if bounds.Right > sw {
+		bounds.Right = sw
+	}
+	if bounds.Left < 0 {
+		bounds.Left = 0
+	}
+	if bounds.Top < 0 {
+		bounds.Top = 0
+	}
+	if bounds.Bottom > sh {
+		bounds.Bottom = sh
+	}
+	if bounds.Left > bounds.Right {
+		panic("bounds.Left excedes bounds.Right")
+	}
+	if bounds.Top > bounds.Bottom {
+		panic("bounds.Top excedes bounds.Bottom")
+	}
+
 	return &boundedRenderer{
-		Screen: s,
-
-		x:  x,
-		y:  y,
-		xm: xm,
-		ym: ym,
-		r:  Rect{Left: xm, Top: ym},
+		Screen:   s,
+		b:        bounds,
+		drawRect: Rect{Left: bounds.Right + 1, Top: bounds.Bottom + 1},
 	}
 }
 
-func (b *boundedRenderer) Size() (int, int) {
-	return b.xm - b.x, b.ym - b.y
+func (r *boundedRenderer) Size() (int, int) {
+	return r.b.Right - r.b.Left, r.b.Bottom - r.b.Top
 }
-func (b *boundedRenderer) SetCell(x, y int, ch rune, fg, bg termbox.Attribute) {
-	if x < 0 {
-		b.r.Left = b.x
-		return
+func (r *boundedRenderer) SetCell(x, y int, ch rune, fg, bg termbox.Attribute) {
+	x += r.b.Left
+	y += r.b.Top
+
+	var oob bool
+	if x < r.b.Left {
+		x = r.b.Left
+		oob = true
 	}
-	if y < 0 {
-		b.r.Top = b.y
-		return
+	if x > r.b.Right {
+		x = r.b.Right
+		oob = true
 	}
-	x += b.x
-	y += b.y
-	if x > b.xm {
-		b.r.Right = b.xm
-		return
+	if y < r.b.Top {
+		y = r.b.Top
+		oob = true
 	}
-	if y > b.ym {
-		b.r.Bottom = b.ym
+	if y > r.b.Bottom {
+		y = r.b.Bottom
+		oob = true
+	}
+
+	if x < r.drawRect.Left {
+		r.drawRect.Left = x
+	}
+	if x > r.drawRect.Right {
+		r.drawRect.Right = x
+	}
+	if y < r.drawRect.Top {
+		r.drawRect.Top = y
+	}
+	if y > r.drawRect.Bottom {
+		r.drawRect.Bottom = y
+	}
+	if oob {
 		return
 	}
 
-	if x < b.r.Left {
-		b.r.Left = x
-	}
-	if x > b.r.Right {
-		b.r.Right = x
-	}
-	if y < b.r.Top {
-		b.r.Top = y
-	}
-	if y > b.r.Bottom {
-		b.r.Bottom = y
-	}
-
-	b.Screen.SetCell(x, y, ch, fg, bg)
+	r.Screen.SetCell(x, y, ch, fg, bg)
 }
-func (b *boundedRenderer) RenderChild(x, y, xm, ym int, c Control) Rect {
-	if x < 0 {
-		x = 0
-	}
-	if y < 0 {
-		y = 0
-	}
-	if xm < 0 {
-		xm = 0
-	}
-	if ym < 0 {
-		ym = 0
-	}
+func (r *boundedRenderer) RenderChild(bounds Rect, c Control) Rect {
+	bounds.Left += r.b.Left
+	bounds.Right += r.b.Left
+	bounds.Top += r.b.Top
+	bounds.Bottom += r.b.Top
 
-	x += b.x
-	y += b.y
-	xm += b.x
-	ym += b.y
-
-	if xm > b.xm {
-		xm = b.xm
-	}
-	if ym > b.ym {
-		ym = b.ym
-	}
-	if x > xm {
-		x = xm
-	}
-	if y > ym {
-		y = ym
-	}
-
-	br := newBoundedRenderer(b.Screen, x, y, xm, ym)
+	br := newBoundedRenderer(r.Screen, bounds)
 	c.Draw(br)
-	return br.r
+
+	br.drawRect.Left -= r.b.Left
+	br.drawRect.Right -= r.b.Left
+	br.drawRect.Top -= r.b.Top
+	br.drawRect.Bottom -= r.b.Top
+	return br.drawRect
 }

@@ -1,6 +1,6 @@
 package ui
 
-type Rect struct{ Top, Bottom, Left, Right int }
+type Rect struct{ Left, Top, Right, Bottom int }
 
 func (r Rect) Contains(x, y int) bool {
 	return x >= r.Left && x <= r.Right && y >= r.Top && y <= r.Bottom

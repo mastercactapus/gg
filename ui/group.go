@@ -60,15 +60,15 @@ func (g *Group) Draw(r Renderer) {
 	putRunes(r, x, y, []rune("┌"+header+"┐"))
 	putRunes(r, x, yMx-1, []rune("└"+strings.Repeat("─", w-2)+"┘"))
 
-	for y++; y < yMx-1; y++ {
-		r.SetCell(x, y, '│', 0, 0)
-		r.SetCell(xMx-1, y, '│', 0, 0)
+	for row := y + 1; row < yMx-1; row++ {
+		r.SetCell(x, row, '│', 0, 0)
+		r.SetCell(xMx-1, row, '│', 0, 0)
 	}
 	g.rendered = g.rendered[:0]
 	for _, c := range g.Controls {
 		g.rendered = append(g.rendered, renderedControl{
 			c: c,
-			r: r.RenderChild(g.X+1, g.Y+1, w-1, h-1, c),
+			r: r.RenderChild(Rect{Left: x + 1, Top: y + 1, Right: xMx - 2, Bottom: yMx - 1}, c),
 		})
 	}
 }

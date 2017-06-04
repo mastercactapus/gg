@@ -158,7 +158,6 @@ func (j *JobUI) render() []Control {
 		&Group{
 			Title: "GCODE -- " + j.statusText(),
 			Width: 40,
-			X:     10,
 			Controls: []Control{
 				&Button{
 					X:           5,
@@ -189,7 +188,7 @@ func (j *JobUI) render() []Control {
 			Title:  j.machineStatusText(),
 			Width:  40,
 			Height: 10,
-			X:      60,
+			X:      40,
 			Controls: []Control{
 				&Text{Lines: []string{"hi"}},
 				&Status{Status: j.s},
