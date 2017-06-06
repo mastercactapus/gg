@@ -17,6 +17,9 @@ func (l Line) Modal() string {
 	if len(l) == 0 {
 		return ""
 	}
+	if l[0].Type == 'N' {
+		l = l[1:]
+	}
 	if l[0].Type == 'G' || l[0].Type == 'M' {
 		return l[0].String()
 	}
