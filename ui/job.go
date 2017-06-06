@@ -57,6 +57,13 @@ func (j *JobUI) loop() {
 		case <-t.C:
 			j.c.Status()
 		case check := <-j.checkStatus:
+			if check.complete {
+				j.v.Active = -1
+				j.v.Sent = -1
+				j.s.State = ""
+				j.checked = true
+				continue
+			}
 			j.v.Active = check.line
 			j.v.Sent = check.line
 		case j.s = <-j.recvStatus:
@@ -159,6 +166,7 @@ func (j *JobUI) status() Control {
 }
 
 func (j *JobUI) performCheck() {
+	j.checked = false
 	resp := j.c.CheckGCode(j.g)
 	go func() {
 		ln := 1

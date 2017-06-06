@@ -61,7 +61,10 @@ func (g *GCodeViewer) Draw(r Renderer) {
 		return
 	}
 	h--
-	top := g.Active - 5
+	top := 0
+	if len(g.Lines) > h {
+		top = g.Active - h/3
+	}
 	if top < 0 {
 		top = 0
 	}
@@ -70,7 +73,8 @@ func (g *GCodeViewer) Draw(r Renderer) {
 		l = l[:h]
 	}
 
-	header := "-- Showing lines " + strconv.Itoa(top+1) + "-" + strconv.Itoa(top+len(l)) + " of " + strconv.Itoa(len(g.Lines))
+	space := strings.Repeat(" ", w)
+	header := "-- Showing lines " + strconv.Itoa(top+1) + "-" + strconv.Itoa(top+len(l)) + " of " + strconv.Itoa(len(g.Lines)) + space
 	putRunes(r, x, y, []rune(header))
 	y++
 
@@ -87,5 +91,8 @@ func (g *GCodeViewer) Draw(r Renderer) {
 			state = gcodeStateReady
 		}
 		renderGcode(r, x, y+i, w, line, state)
+	}
+	for i := len(l); i < h; i++ {
+		putRunes(r, x, y+i, []rune(space))
 	}
 }
