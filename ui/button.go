@@ -10,18 +10,18 @@ type Button struct {
 	X, Y        int
 	Width       int
 	Text        string
-	Disabled    bool
+	Enabled     bool
 	OnClickFunc func(x, y int)
 }
 
 func (b *Button) OnClick(x, y int) {
-	if b.Disabled {
+	if !b.Enabled {
 		return
 	}
 	if b.OnClickFunc == nil {
 		return
 	}
-	b.OnClickFunc(x, x)
+	b.OnClickFunc(x, y)
 }
 
 func (b *Button) Draw(r Renderer) {
@@ -38,7 +38,7 @@ func (b *Button) Draw(r Renderer) {
 	text := "[" + space + b.Text + space + "]"
 
 	var fg, bg termbox.Attribute
-	if b.Disabled {
+	if !b.Enabled {
 		fg = termbox.ColorBlack
 	} else {
 		bg = termbox.ColorBlue
