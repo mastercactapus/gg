@@ -27,7 +27,7 @@ func NewUI(r RenderFunc) (*UI, error) {
 	if err != nil {
 		return nil, err
 	}
-	termbox.SetInputMode(termbox.InputMouse)
+	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
 	u := &UI{
 		r:        r,
 		renderCh: make(chan struct{}, 1),
