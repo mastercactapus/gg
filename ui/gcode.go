@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -17,7 +18,7 @@ const (
 	gcodeStateDone
 )
 
-func renderGcode(s CellSetter, x, y, w, ln int, g gcode.Line, state gcodeState) {
+func renderGcode(s CellSetter, x, y, w int, g gcode.Line, state gcodeState) {
 	stat := ' '
 	var fg, bg termbox.Attribute
 	switch state {
@@ -33,7 +34,7 @@ func renderGcode(s CellSetter, x, y, w, ln int, g gcode.Line, state gcodeState) 
 		stat = 'D'
 	}
 
-	line := "[" + string(stat) + "] N" + strconv.Itoa(ln) + " " + g.String()
+	line := fmt.Sprintf("[%c] %-5s %s", stat, g[0].String(), g[1:].String())
 	line += strings.Repeat(" ", w-len(line))
 
 	putRunesA(s, x, y, []rune(line), fg, bg)
@@ -60,18 +61,22 @@ func (g *GCodeViewer) Draw(r Renderer) {
 		return
 	}
 	h--
-	l := g.Lines[g.Top:]
+	top := g.Active - 5
+	if top < 0 {
+		top = 0
+	}
+	l := g.Lines[top:]
 	if h < len(l) {
 		l = l[:h]
 	}
 
-	header := "-- Showing lines " + strconv.Itoa(g.Top+1) + "-" + strconv.Itoa(g.Top+len(l)) + " of " + strconv.Itoa(len(g.Lines))
+	header := "-- Showing lines " + strconv.Itoa(top+1) + "-" + strconv.Itoa(top+len(l)) + " of " + strconv.Itoa(len(g.Lines))
 	putRunes(r, x, y, []rune(header))
 	y++
 
 	for i, line := range l {
 		var state gcodeState
-		ln := i + g.Top + 1
+		ln := i + top + 1
 		if ln < g.Active {
 			state = gcodeStateDone
 		} else if ln == g.Active {
@@ -81,6 +86,6 @@ func (g *GCodeViewer) Draw(r Renderer) {
 		} else {
 			state = gcodeStateReady
 		}
-		renderGcode(r, x, y+i, w, ln, line, state)
+		renderGcode(r, x, y+i, w, line, state)
 	}
 }

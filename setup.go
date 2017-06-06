@@ -6,6 +6,9 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/signal"
+	"runtime/pprof"
+	"strings"
 	"time"
 
 	serial "go.bug.st/serial.v1"
@@ -14,6 +17,7 @@ import (
 	"github.com/mastercactapus/gg/grbl"
 	"github.com/mastercactapus/gg/log"
 	"github.com/mastercactapus/gg/ui"
+	termbox "github.com/nsf/termbox-go"
 )
 
 var (
@@ -32,6 +36,31 @@ func failf(s string, args ...interface{}) {
 	os.Exit(1)
 }
 
+type logger struct {
+	io.ReadWriteCloser
+	rw io.Writer
+	r  io.Writer
+	w  io.Writer
+}
+
+var rep = strings.NewReplacer("\n", "\\n", "\r", "\\r")
+
+func fmtLine(str string) string {
+	return rep.Replace(str) + "\n"
+}
+
+func (l *logger) Write(p []byte) (int, error) {
+	io.WriteString(l.rw, "W: "+fmtLine(string(p)))
+	io.WriteString(l.w, "W: "+fmtLine(string(p)))
+	return l.ReadWriteCloser.Write(p)
+}
+func (l *logger) Read(p []byte) (int, error) {
+	n, err := l.ReadWriteCloser.Read(p)
+	io.WriteString(l.rw, "R: "+fmtLine(string(p[:n])))
+	io.WriteString(l.r, "R: "+fmtLine(string(p[:n])))
+	return n, err
+}
+
 func Run(f func()) {
 	if *resume {
 		p, err := serial.Open(*port, &serial.Mode{BaudRate: *rate})
@@ -39,8 +68,14 @@ func Run(f func()) {
 			failf("failed to open serial port: %v", err)
 		}
 
-		c := grbl.NewConn(p)
-		c.SetLogger(l)
+		fdrw, _ := os.Create("RWDATA.log")
+		fdr, _ := os.Create("RDATA.log")
+		fdw, _ := os.Create("WDATA.log")
+		defer fdrw.Close()
+		defer fdr.Close()
+		defer fdw.Close()
+
+		c := grbl.NewGrbl(&logger{ReadWriteCloser: p, rw: fdrw, r: fdr, w: fdw})
 		u, err := ui.NewJobUI(c, lines)
 		if err != nil {
 			failf("failed to launch UI: %v", err)
@@ -100,6 +135,16 @@ func resumeState(r io.Reader) error {
 // ready to start processing G-Code commands.
 func Setup(c Config) {
 	flag.Parse()
+	ch := make(chan os.Signal, 2)
+	signal.Notify(ch, os.Interrupt)
+	go func() {
+		<-ch
+		fd, _ := os.Create("stack.log")
+		pprof.Lookup("goroutine").WriteTo(fd, 1)
+		fd.Close()
+		termbox.Close()
+		panic("dumped stack traces to stack.log")
+	}()
 
 	var flags int
 	if *resume {

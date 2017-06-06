@@ -22,10 +22,10 @@ func (g *Group) OnClick(x, y int) {
 		if !ok {
 			continue
 		}
-		if !c.r.Contains(x, y) {
+		if !c.r.Contains(x+g.X, y+g.Y) {
 			continue
 		}
-		cc.OnClick(c.r.Translate(x, y))
+		cc.OnClick(c.r.Translate(x+g.X, y+g.Y))
 	}
 }
 

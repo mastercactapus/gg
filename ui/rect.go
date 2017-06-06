@@ -6,7 +6,7 @@ func (r Rect) Contains(x, y int) bool {
 	return x >= r.Left && x <= r.Right && y >= r.Top && y <= r.Bottom
 }
 func (r Rect) Translate(x, y int) (int, int) {
-	return r.Left + x, r.Top + y
+	return x - r.Left, y - r.Top
 }
 
 func StandardSize(x, y, w, h, sw, sh int) (tx, ty, tw, th int) {

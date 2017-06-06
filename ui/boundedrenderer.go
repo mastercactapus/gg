@@ -42,24 +42,21 @@ func (r *boundedRenderer) Size() (int, int) {
 	return r.b.Right - r.b.Left, r.b.Bottom - r.b.Top
 }
 func (r *boundedRenderer) SetCell(x, y int, ch rune, fg, bg termbox.Attribute) {
-	x += r.b.Left
-	y += r.b.Top
-
+	w, h := r.Size()
 	var oob bool
-	if x < r.b.Left {
-		x = r.b.Left
+	if x < 0 {
+		x = 0
+		oob = true
+	} else if x > w {
+		x = w
 		oob = true
 	}
-	if x > r.b.Right {
-		x = r.b.Right
+
+	if y < 0 {
+		y = 0
 		oob = true
-	}
-	if y < r.b.Top {
-		y = r.b.Top
-		oob = true
-	}
-	if y > r.b.Bottom {
-		y = r.b.Bottom
+	} else if y > h {
+		y = h
 		oob = true
 	}
 
@@ -79,20 +76,16 @@ func (r *boundedRenderer) SetCell(x, y int, ch rune, fg, bg termbox.Attribute) {
 		return
 	}
 
-	r.Screen.SetCell(x, y, ch, fg, bg)
+	r.Screen.SetCell(x+r.b.Left, y+r.b.Top, ch, fg, bg)
 }
 func (r *boundedRenderer) RenderChild(bounds Rect, c Control) Rect {
-	bounds.Left += r.b.Left
-	bounds.Right += r.b.Left
-	bounds.Top += r.b.Top
-	bounds.Bottom += r.b.Top
-
-	br := newBoundedRenderer(r.Screen, bounds)
+	br := newBoundedRenderer(r, bounds)
 	c.Draw(br)
 
-	br.drawRect.Left -= r.b.Left
-	br.drawRect.Right -= r.b.Left
-	br.drawRect.Top -= r.b.Top
-	br.drawRect.Bottom -= r.b.Top
+	br.drawRect.Left += bounds.Left
+	br.drawRect.Right += bounds.Left
+	br.drawRect.Top += bounds.Top
+	br.drawRect.Bottom += bounds.Top
+
 	return br.drawRect
 }

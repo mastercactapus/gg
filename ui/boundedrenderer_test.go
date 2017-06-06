@@ -105,7 +105,7 @@ func TestBoundedRenderer_Full(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			ts := &testS{SizeW: screen.x, SizeH: screen.y}
 			ts.Reset()
-			b := newBoundedRenderer(ts, Rect{Right: screen.x, Bottom: screen.y})
+			b := newBoundedRenderer(ts, Rect{Top: 3, Right: screen.x, Bottom: screen.y})
 			var sw, sh int
 			result := b.RenderChild(bounds, DrawFunc(func(r Renderer) {
 				sw, sh = r.Size()
@@ -144,7 +144,7 @@ func TestBoundedRenderer_Full(t *testing.T) {
 		ExpectSize  pair
 		ExpectChild Rect
 	}{
-		{Screen: pair{80, 40}, Bounds: Rect{1, 1, 39, 39}, Set: []pair{{1, 20}, {37, 37}}, ExpectSize: pair{38, 38}, ExpectChild: Rect{2, 21, 38, 38}},
+		{Screen: pair{80, 40}, Bounds: Rect{1, 1, 39, 39}, Set: []pair{{1, 20}, {37, 37}}, ExpectSize: pair{38, 36}, ExpectChild: Rect{2, 21, 38, 37}},
 	}
 
 	for _, d := range data {
@@ -217,7 +217,7 @@ func TestBoundedRenderer_RenderChild(t *testing.T) {
 		Set    []pair
 		Expect Rect
 	}{
-		{r: Rect{5, 10, 9, 14}, Set: []pair{{0, 0}, {20, 20}}, Expect: Rect{5, 10, 9, 14}},
+		{r: Rect{5, 10, 9, 14}, Set: []pair{{0, 0}, {20, 20}}, Expect: Rect{5, 10, 8, 13}},
 		{r: Rect{5, 10, 9, 14}, Set: []pair{{0, 0}, {1, 1}}, Expect: Rect{5, 10, 6, 11}},
 		{r: Rect{5, 10, 9, 14}, Set: []pair{{0, 0}}, Expect: Rect{5, 10, 5, 10}},
 	}

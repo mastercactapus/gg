@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"regexp"
 	"time"
 
 	"github.com/mastercactapus/gg/gcode"
@@ -15,21 +16,28 @@ const (
 	actionStopJob
 )
 
+type checkStatus struct {
+	line     int
+	err      error
+	complete bool
+}
+
 type JobUI struct {
-	c  *grbl.Conn
+	c  *grbl.Grbl
 	ui *UI
 	g  []gcode.Line
 
-	running bool
 	checked bool
 	v       GCodeViewer
 
-	recv       chan grbl.Response
-	s          *grbl.Status
-	recvStatus chan *grbl.Status
+	recv        chan grbl.Response
+	s           grbl.Status
+	recvStatus  chan grbl.Status
+	checkStatus chan checkStatus
 
 	actionCh chan action
 	renderCh chan struct{}
+	closeCh  chan struct{}
 }
 
 func (j *JobUI) renderSync() {
@@ -37,7 +45,7 @@ func (j *JobUI) renderSync() {
 }
 
 func (j *JobUI) loop() {
-	t := time.NewTicker(time.Millisecond * 100)
+	t := time.NewTicker(time.Second)
 	defer t.Stop()
 	defer close(j.renderCh)
 
@@ -48,9 +56,10 @@ func (j *JobUI) loop() {
 			continue
 		case <-t.C:
 			j.c.Status()
+		case check := <-j.checkStatus:
+			j.v.Active = check.line
+			j.v.Sent = check.line
 		case j.s = <-j.recvStatus:
-		case r := <-j.recv:
-			j.handleResponse(r)
 		case a := <-j.actionCh:
 			j.handleAction(a)
 		}
@@ -58,27 +67,36 @@ func (j *JobUI) loop() {
 	}
 }
 
-func (j *JobUI) handleResponse(r grbl.Response) {
-
-}
+var lineRx = regexp.MustCompile("^N([0-9]+)")
 
 func (j *JobUI) handleAction(a action) {
 	switch a {
 	case actionCheckCode:
-		j.checked = false
-		j.running = true
+		j.performCheck()
+	case actionStopJob:
+		j.performStop()
+	}
+}
+func (j *JobUI) performStop() {
+	switch j.s.State {
+	case grbl.StateCheck:
+		j.v.Active = 0
+		j.v.Sent = 0
+		j.c.SoftReset()
 	}
 }
 
-func NewJobUI(c *grbl.Conn, g []gcode.Line) (*JobUI, error) {
-
+func NewJobUI(c *grbl.Grbl, g []gcode.Line) (*JobUI, error) {
 	j := &JobUI{
-		c:          c,
-		g:          g,
-		renderCh:   make(chan struct{}),
-		actionCh:   make(chan action, 1),
-		recv:       c.Recv(),
-		recvStatus: c.RecvStatus(),
+		c:           c,
+		g:           g,
+		renderCh:    make(chan struct{}),
+		actionCh:    make(chan action, 1),
+		recvStatus:  c.Status(),
+		checkStatus: make(chan checkStatus),
+	}
+	for i, l := range j.g {
+		j.g[i] = append(gcode.Line{gcode.Word{Type: 'N', Value: float64(i + 1)}}, l...)
 	}
 	ui, err := NewUI(j.render)
 	if err != nil {
@@ -94,17 +112,20 @@ func NewJobUI(c *grbl.Conn, g []gcode.Line) (*JobUI, error) {
 
 	go j.loop()
 	return j, nil
+}
 
+func (j *JobUI) isRunning() bool {
+	return j.s.State == grbl.StateJog || j.s.State == grbl.StateCheck || j.s.State == grbl.StateRun
 }
 func (j *JobUI) statusText() string {
 	switch {
-	case !j.checked && !j.running:
+	case !j.checked && !j.isRunning():
 		return "Unchecked"
-	case j.checked && !j.running:
+	case j.checked && !j.isRunning():
 		return "Idle"
-	case !j.checked && j.running:
+	case !j.checked && j.isRunning():
 		return "Checking"
-	case j.checked && j.running:
+	case j.checked && j.isRunning():
 		return "Running"
 	}
 
@@ -114,9 +135,9 @@ func (j *JobUI) status() Control {
 	switch {
 	default:
 		return &Text{X: 1, Y: 3, Lines: []string{"No job running.", ""}}
-	case !j.checked && !j.running:
-		return &Text{X: 1, Y: 3, Lines: []string{"Perform 'Check' to get started."}}
-	case !j.checked && j.running:
+	case !j.checked && !j.isRunning():
+		return &Text{X: 1, Y: 3, Lines: []string{"Perform 'Check' to get started.", ""}}
+	case !j.checked && j.isRunning():
 		return &Progress{
 			X:     1,
 			Y:     3,
@@ -125,7 +146,7 @@ func (j *JobUI) status() Control {
 			Max:   len(j.v.Lines),
 			Value: j.v.Active - 1,
 		}
-	case j.checked && j.running:
+	case j.checked && j.isRunning():
 		return &Text{
 			X: 1, Y: 3,
 			Lines: []string{
@@ -138,9 +159,18 @@ func (j *JobUI) status() Control {
 }
 
 func (j *JobUI) performCheck() {
-	j.running = true
-	j.checked = false
-
+	resp := j.c.CheckGCode(j.g)
+	go func() {
+		ln := 1
+		for stat := range resp {
+			j.checkStatus <- checkStatus{
+				line: ln,
+				err:  stat.Err,
+			}
+			ln++
+		}
+		j.checkStatus <- checkStatus{complete: true}
+	}()
 }
 
 func (j *JobUI) duration() time.Duration {
@@ -150,54 +180,8 @@ func (j *JobUI) remaining() time.Duration {
 	return time.Second * 19
 }
 
-func (j *JobUI) render() []Control {
-	j.renderSync()
-	defer j.renderSync()
-
-	return []Control{
-		&Group{
-			Title: "GCODE -- " + j.statusText(),
-			Width: 40,
-			Controls: []Control{
-				&Button{
-					X:           5,
-					Y:           1,
-					Text:        "Check",
-					Disabled:    j.running,
-					OnClickFunc: func(x, y int) { j.actionCh <- actionCheckCode },
-				},
-				&Button{
-					X:           16,
-					Y:           1,
-					Text:        "Run",
-					Disabled:    j.running || !j.checked,
-					OnClickFunc: func(x, y int) { j.actionCh <- actionRunJob },
-				},
-				&Button{
-					X:           25,
-					Y:           1,
-					Text:        "Stop",
-					Disabled:    !j.running,
-					OnClickFunc: func(x, y int) { j.actionCh <- actionStopJob },
-				},
-				j.status(),
-				&j.v,
-			},
-		},
-		&Group{
-			Title:  j.machineStatusText(),
-			Width:  40,
-			Height: 10,
-			X:      40,
-			Controls: []Control{
-				&Text{Lines: []string{"hi"}},
-				&Status{Status: j.s},
-			},
-		},
-	}
-}
 func (j *JobUI) machineStatusText() string {
-	if j.s == nil {
+	if j.s.State == grbl.StateUnknown {
 		return "Machine Status -- Connecting"
 	}
 	return "Machine Status -- " + string(j.s.State)
