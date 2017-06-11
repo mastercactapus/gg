@@ -11,6 +11,8 @@ type Group struct {
 	Height   int
 	Width    int
 	X, Y     int
+	Clear    bool
+	NoBorder bool
 	Controls []Control
 
 	rendered []renderedControl
@@ -56,16 +58,34 @@ func (g *Group) Draw(r Renderer) {
 	} else {
 		header = "─ " + g.Title + " " + strings.Repeat("─", w-5-len(g.Title))
 	}
+	if !g.NoBorder {
+		putRunes(r, x, y, []rune("┌"+header+"┐"))
+		putRunes(r, x, yMx-1, []rune("└"+strings.Repeat("─", w-2)+"┘"))
 
-	putRunes(r, x, y, []rune("┌"+header+"┐"))
-	putRunes(r, x, yMx-1, []rune("└"+strings.Repeat("─", w-2)+"┘"))
-
-	for row := y + 1; row < yMx-1; row++ {
-		r.SetCell(x, row, '│', 0, 0)
-		r.SetCell(xMx-1, row, '│', 0, 0)
+		for row := y + 1; row < yMx-1; row++ {
+			r.SetCell(x, row, '│', 0, 0)
+			r.SetCell(xMx-1, row, '│', 0, 0)
+		}
+	} else {
+		xMx++
+		x--
+		y--
+		yMx++
 	}
+
+	if g.Clear {
+		for col := x + 1; col < xMx-1; col++ {
+			for row := y + 1; row < yMx-1; row++ {
+				r.SetCell(col, row, ' ', 0, 0)
+			}
+		}
+	}
+
 	g.rendered = g.rendered[:0]
 	for _, c := range g.Controls {
+		if c == nil {
+			continue
+		}
 		g.rendered = append(g.rendered, renderedControl{
 			c: c,
 			r: r.RenderChild(Rect{Left: x + 1, Top: y + 1, Right: xMx - 2, Bottom: yMx - 1}, c),

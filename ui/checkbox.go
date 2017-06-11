@@ -53,6 +53,13 @@ func (c *Checkbox) Draw(r Renderer) {
 	var fg, bg termbox.Attribute
 	if !c.Enabled {
 		fg = termbox.ColorBlack
+	} else {
+		if c.Checked {
+			fg = termbox.ColorYellow
+		} else {
+			fg = termbox.ColorWhite
+		}
+		bg = termbox.ColorBlue
 	}
 
 	rs := []rune(icon + " " + c.Text)
