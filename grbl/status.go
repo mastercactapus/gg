@@ -65,10 +65,10 @@ type Status struct {
 
 	WCO []float64
 
-	FieldOVerrides struct {
-		F            int
-		R            int
-		SpindleSpeed int
+	FieldOverrides struct {
+		Feed    int
+		Rapid   int
+		Spindle int
 	}
 
 	Aux struct {
@@ -170,9 +170,9 @@ func parseMachineStatus(data string) (*Status, error) {
 			var ints []int
 			ints, err = parseInts(val)
 			if len(ints) == 3 {
-				s.FieldOVerrides.F = ints[0]
-				s.FieldOVerrides.R = ints[1]
-				s.FieldOVerrides.SpindleSpeed = ints[2]
+				s.FieldOverrides.Feed = ints[0]
+				s.FieldOverrides.Rapid = ints[1]
+				s.FieldOverrides.Spindle = ints[2]
 			}
 		case "A":
 			for _, c := range val {
