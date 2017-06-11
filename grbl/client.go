@@ -226,14 +226,14 @@ func (c *Client) SetMode(m ClientMode) {
 	c.setMode <- m
 }
 
-func (c *Client) Execute(command []byte) *Response {
+func (c *Client) Execute(command []byte) chan *Response {
 	ch := make(chan *Response, 1)
 	c.sendCh <- &clientRequest{
 		data:  command,
 		resCh: ch,
 	}
 
-	return <-ch
+	return ch
 }
 func (c *Client) ExecuteMany(commands [][]byte) chan *Response {
 	resCh := make(chan *Response, len(commands))
