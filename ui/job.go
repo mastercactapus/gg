@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"log"
 	"regexp"
 	"time"
 
@@ -59,6 +60,8 @@ type JobUI struct {
 	shuttleBusted    bool
 	shuttleRing      int
 	shuttleAxis      byte
+
+	l *Logger
 }
 
 func NewJobUI(c *grbl.Grbl, g []gcode.Line) (*JobUI, error) {
@@ -79,7 +82,10 @@ func NewJobUI(c *grbl.Grbl, g []gcode.Line) (*JobUI, error) {
 		zeroAxis:     make(chan byte),
 
 		shuttleEvents: s.Events(),
+
+		l: &Logger{},
 	}
+	log.SetOutput(j.l)
 	for i, l := range j.g {
 		j.g[i] = append(gcode.Line{gcode.Word{Type: 'N', Value: float64(i + 1)}}, l...)
 	}

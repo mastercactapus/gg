@@ -207,6 +207,12 @@ func (j *JobUI) render() []Control {
 				},
 			},
 		},
+		&Group{
+			Title:    "Logs",
+			X:        40,
+			Y:        35,
+			Controls: []Control{j.l},
+		},
 	}
 }
 

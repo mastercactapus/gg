@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	ll "log"
-	"net"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -30,15 +28,6 @@ var (
 	resume  = flag.Bool("resume", false, "Resume an existing log (implies -run).")
 	l       *log.Writer
 )
-
-func init() {
-	c, err := net.Dial("tcp", ":3006")
-	if err != nil {
-		panic(err)
-	}
-	ll.SetOutput(c)
-	ll.Println("START")
-}
 
 func failf(s string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, s, args...)

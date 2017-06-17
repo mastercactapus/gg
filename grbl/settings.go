@@ -93,7 +93,6 @@ func (s *settingsParser) parseAccel(val string, d Distance, t1, t2 time.Duration
 }
 
 func (s *Settings) parseSetting(data []byte) {
-	log.Println(string(data))
 	l := strings.TrimSpace(string(data))
 	p := &settingsParser{}
 	v := strings.SplitN(l, "=", 2)
