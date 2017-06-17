@@ -3,6 +3,7 @@ package grbl
 import (
 	"errors"
 	"io"
+	"io/ioutil"
 	"log"
 
 	"github.com/mastercactapus/gg/gcode"
@@ -11,6 +12,7 @@ import (
 type Grbl struct {
 	c *Client
 
+	l        *log.Logger
 	s        Status
 	settings Settings
 
@@ -25,11 +27,16 @@ func NewGrblClient(c *Client) *Grbl {
 	g := &Grbl{
 		c: c,
 
+		l: log.New(ioutil.Discard, "", 0),
+
 		statusCh:   make(chan Status),
 		settingsCh: make(chan Settings, 1),
 	}
 	go g.loop()
 	return g
+}
+func (g *Grbl) SetLogger(l *log.Logger) {
+	g.l = l
 }
 
 func (g *Grbl) SerialMode() ClientMode {
@@ -55,7 +62,7 @@ func (g *Grbl) loop() {
 			}
 
 			if data[0] == '$' {
-				g.settings.parseSetting(data)
+				g.settings.parseSetting(g.l, data)
 				continue
 			}
 
@@ -161,7 +168,7 @@ func (g *Grbl) Settings() chan Settings {
 	go func() {
 		d := <-resp
 		if d.Err != nil {
-			log.Println("failed to get settings:", d.Err)
+			g.l.Println("failed to get settings:", d.Err)
 			return
 		}
 		g.settingsCh <- g.settings

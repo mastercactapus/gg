@@ -65,7 +65,11 @@ type JobUI struct {
 }
 
 func NewJobUI(c *grbl.Grbl, g []gcode.Line) (*JobUI, error) {
-	s := shuttlexpress.NewDevice()
+	l := &Logger{}
+	s := shuttlexpress.NewDevice(log.New(l, "ShuttleXpress: ", 0))
+	log.SetOutput(l)
+	log.SetFlags(0)
+	c.SetLogger(log.New(l, "Grbl", 0))
 	j := &JobUI{
 		c:            c,
 		g:            g,
@@ -83,9 +87,8 @@ func NewJobUI(c *grbl.Grbl, g []gcode.Line) (*JobUI, error) {
 
 		shuttleEvents: s.Events(),
 
-		l: &Logger{},
+		l: l,
 	}
-	log.SetOutput(j.l)
 	for i, l := range j.g {
 		j.g[i] = append(gcode.Line{gcode.Word{Type: 'N', Value: float64(i + 1)}}, l...)
 	}

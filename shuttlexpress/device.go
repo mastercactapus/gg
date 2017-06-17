@@ -2,6 +2,7 @@ package shuttlexpress
 
 import (
 	"io"
+	"io/ioutil"
 	"log"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 type Device struct {
 	eventCh chan Event
+	l       *log.Logger
 }
 
 type Event struct {
@@ -31,9 +33,13 @@ const (
 	ConnectionFailed
 )
 
-func NewDevice() *Device {
+func NewDevice(l *log.Logger) *Device {
+	if l == nil {
+		l = log.New(ioutil.Discard, "", 0)
+	}
 	d := &Device{
 		eventCh: make(chan Event),
+		l:       l,
 	}
 	go d.loop()
 	return d
@@ -50,7 +56,7 @@ func (d *Device) loop() {
 			continue
 		}
 		if err != nil {
-			log.Println("ERR:", err)
+			d.l.Println(err)
 			d.eventCh <- Event{Type: EventTypeConnection, Value: ConnectionFailed}
 			continue
 		}
