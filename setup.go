@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -26,6 +27,7 @@ var (
 	port    = flag.String("port", "", "Serial port to use.")
 	rate    = flag.Int("b", 115200, "Baudrate of the serial port.")
 	resume  = flag.Bool("resume", false, "Resume an existing log (implies -run).")
+	remote  = flag.String("remote", "", "Connect to a remote serial port.")
 	l       *log.Writer
 )
 
@@ -63,9 +65,18 @@ func (l *logger) Read(p []byte) (int, error) {
 
 func Run(f func()) {
 	if *resume {
-		p, err := serial.Open(*port, &serial.Mode{BaudRate: *rate})
-		if err != nil {
-			failf("failed to open serial port: %v", err)
+		var err error
+		var p io.ReadWriteCloser
+		if *remote != "" {
+			p, err = net.Dial("tcp", *remote)
+			if err != nil {
+				failf("failed to open remote serial port: %v", err)
+			}
+		} else {
+			p, err = serial.Open(*port, &serial.Mode{BaudRate: *rate})
+			if err != nil {
+				failf("failed to open serial port: %v", err)
+			}
 		}
 
 		fdrw, _ := os.Create("RWDATA.log")
