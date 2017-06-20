@@ -90,26 +90,28 @@ func (c *Client) readLoop() {
 			} else {
 				buf = append(buf, b)
 			}
-		} else {
-			if push != 0 {
-				push = 0
-				if len(pushBuf) == 0 {
-					continue
-				}
-				data := make([]byte, len(pushBuf))
-				copy(data, pushBuf)
-				pushBuf = pushBuf[:0]
-				c.responseCh <- data
-			} else {
-				if len(buf) == 0 {
-					continue
-				}
-				data := make([]byte, len(buf))
-				copy(data, buf)
-				buf = buf[:0]
-				c.responseCh <- data
-			}
+			continue
 		}
+
+		if push != 0 {
+			push = 0
+			if len(pushBuf) == 0 {
+				continue
+			}
+			data := make([]byte, len(pushBuf))
+			copy(data, pushBuf)
+			pushBuf = pushBuf[:0]
+			c.responseCh <- data
+			continue
+		}
+
+		if len(buf) == 0 {
+			continue
+		}
+		data := make([]byte, len(buf))
+		copy(data, buf)
+		buf = buf[:0]
+		c.responseCh <- data
 	}
 }
 
@@ -211,6 +213,8 @@ func (c *Client) errMode() {
 	var req *clientRequest
 	for {
 		select {
+		case c.getMode <- c.mode:
+		case <-c.setMode:
 		case <-c.closeCh:
 			return
 		case req = <-c.sendCh:

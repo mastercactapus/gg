@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/mastercactapus/gg/gcode"
 )
@@ -54,7 +55,8 @@ func (g *Grbl) loop() {
 			if data[0] == '<' {
 				s, err := parseMachineStatus(string(data))
 				if err != nil {
-					panic(err)
+					g.l.Println("parse fail:", data[0], err)
+					continue
 				}
 				g.mergeStatus(s)
 				g.statusCh <- g.s
@@ -66,12 +68,22 @@ func (g *Grbl) loop() {
 				continue
 			}
 
-			switch string(data) {
+			s := string(data)
+			if strings.HasPrefix(s, "Grbl") {
+				// version info
+				g.Settings()
+				continue
+			}
+
+			switch s {
 			case "[MSG:Enabled]":
 				g.s.State = StateCheck
 				g.statusCh <- g.s
 				continue
+			case "[MSG:Disabled]":
+				//resetting
 			}
+			g.l.Println("push:", s)
 		}
 	}
 }
