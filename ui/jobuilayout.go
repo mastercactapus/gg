@@ -46,7 +46,7 @@ func (j *JobUI) render() []Control {
 			Height: 20,
 			X:      40,
 			Controls: []Control{
-				&Status{X: 1, Y: 3, Status: &j.s},
+				&Status{X: 1, Y: 3, Status: &j.s, Settings: &j.settings},
 
 				&Group{
 					Width:  40,
@@ -183,8 +183,7 @@ func (j *JobUI) render() []Control {
 			Title:  "Configuration",
 			Width:  20,
 			Height: 6,
-			X:      40,
-			Y:      20,
+			X:      100,
 			Controls: []Control{
 				&Text{Lines: []string{"Serial Mode"}},
 				&Checkbox{
@@ -210,7 +209,7 @@ func (j *JobUI) render() []Control {
 		&Group{
 			Title:    "Logs",
 			X:        40,
-			Y:        35,
+			Y:        20,
 			Controls: []Control{j.l},
 		},
 	}

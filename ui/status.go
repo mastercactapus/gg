@@ -10,6 +10,7 @@ import (
 type Status struct {
 	X, Y int
 	*grbl.Status
+	*grbl.Settings
 }
 
 func (s *Status) Draw(r Renderer) {
@@ -41,4 +42,7 @@ func (s *Status) Draw(r Renderer) {
 
 	printCoords(s.X, s.Y, 10, "Work", s.WPos)
 	printCoords(s.X, s.Y+4, 10, "Machine", s.MPos)
+	if s.Settings != nil {
+		printCoords(s.X, s.Y+8, 10, "Max", []float64{s.MaxTravel.X.Millimeters(), s.MaxTravel.Y.Millimeters(), s.MaxTravel.Z.Millimeters()})
+	}
 }
