@@ -69,7 +69,7 @@ func NewJobUI(c *grbl.Grbl, g []gcode.Line) (*JobUI, error) {
 	s := shuttlexpress.NewDevice(log.New(l, "ShuttleXpress: ", 0))
 	log.SetOutput(l)
 	log.SetFlags(0)
-	c.SetLogger(log.New(l, "Grbl", 0))
+	c.SetLogger(log.New(l, "Grbl: ", 0))
 	j := &JobUI{
 		c:            c,
 		g:            g,
