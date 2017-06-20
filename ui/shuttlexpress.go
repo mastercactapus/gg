@@ -1,9 +1,6 @@
 package ui
 
 import (
-	"log"
-	"time"
-
 	"github.com/mastercactapus/gg/gcode"
 	"github.com/mastercactapus/gg/grbl"
 	"github.com/mastercactapus/gg/shuttlexpress"
@@ -50,24 +47,21 @@ func (j *JobUI) handleShuttleEvent(e shuttlexpress.Event) {
 	}
 }
 func (j *JobUI) shuttleMove(val int) {
-	log.Println("Move", val, j.s.State, j.shuttleAxis)
 	if !j.shuttleConnected {
-		log.Println("not connected")
 		return
 	}
 	if j.s.State != grbl.StateIdle && j.s.State != grbl.StateJog {
-		log.Println("bad state")
 		return
 	}
 	if j.shuttleAxis == 0 {
-		log.Println("axis busted")
 		return
 	}
-	s := time.Now()
+	if j.shuttleAxis == 'Z' {
+		val = -val
+	}
 	j.c.Jog(gcode.Line{
 		{Type: 'G', Value: 91},
 		{Type: j.shuttleAxis, Value: j.jogStep * float64(val)},
 		{Type: 'F', Value: 10000},
 	})
-	log.Println("move conf", time.Since(s))
 }
